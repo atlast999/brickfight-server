@@ -10,3 +10,11 @@ data class AppResponse<T>(
     @SerialName("data") val data: T? = null,
 )
 
+@Serializable
+data class PagingModel<T>(
+    @SerialName("page") val page: Int,
+    @SerialName("page_size") val pageSize: Int,
+    @SerialName("total_page") val totalPage: Int,
+    @SerialName("items") val items: List<T>,
+)
+

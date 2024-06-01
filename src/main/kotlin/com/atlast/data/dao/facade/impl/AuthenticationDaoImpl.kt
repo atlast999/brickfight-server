@@ -11,7 +11,7 @@ import org.jetbrains.exposed.sql.selectAll
 class AuthenticationDaoImpl : AuthenticationDao {
 
     private fun resultRowToUser(row: ResultRow) = User(
-        id = row[Users.id],
+        id = row[Users.id].value,
         username = row[Users.username],
         password = row[Users.password]
     )
@@ -25,5 +25,11 @@ class AuthenticationDaoImpl : AuthenticationDao {
             it[username] = user.username
             it[password] = user.password
         }.resultedValues?.firstOrNull()?.let(::resultRowToUser)
+    }
+
+    override suspend fun getUser(userId: Int): User? = DatabaseInstance.dbQuery {
+        Users.selectAll().where {
+            Users.id eq userId
+        }.map(::resultRowToUser).singleOrNull()
     }
 }

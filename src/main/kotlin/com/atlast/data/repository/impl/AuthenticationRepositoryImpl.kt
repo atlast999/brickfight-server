@@ -7,6 +7,7 @@ import com.atlast.data.dto.SignupRequest
 import com.atlast.data.dto.SignupResponse
 import com.atlast.data.dto.toUser
 import com.atlast.data.repository.AuthenticationRepository
+import com.atlast.utils.JWTExt
 
 class AuthenticationRepositoryImpl(
     private val authenticationDao: AuthenticationDao,
@@ -21,7 +22,7 @@ class AuthenticationRepositoryImpl(
         ) ?: throw IllegalStateException("Failed to create user")
 
         return SignupResponse(
-            token = createdUser.id.toString()
+            token = JWTExt.generateToken(userId = createdUser.id),
         )
     }
 
@@ -32,7 +33,7 @@ class AuthenticationRepositoryImpl(
             throw IllegalStateException("Invalid password")
         }
         return LoginResponse(
-            token = user.id.toString()
+            token = JWTExt.generateToken(userId = user.id),
         )
     }
 

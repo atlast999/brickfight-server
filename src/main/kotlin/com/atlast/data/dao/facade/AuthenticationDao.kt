@@ -3,8 +3,7 @@ package com.atlast.data.dao.facade
 import com.atlast.domain.User
 
 interface AuthenticationDao {
-    suspend fun getUser(username: String): User?
-    suspend fun createUser(user: User): User?
-
-    suspend fun getUser(userId: Int): User?
+    fun getUser(username: String): User?
+    fun createUser(user: User): User?
+    fun getUser(userId: Int): User?
 }

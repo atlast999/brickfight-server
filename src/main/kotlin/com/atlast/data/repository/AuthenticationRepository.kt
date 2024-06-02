@@ -1,12 +1,9 @@
 package com.atlast.data.repository
 
-import com.atlast.data.dto.LoginRequest
-import com.atlast.data.dto.LoginResponse
-import com.atlast.data.dto.SignupRequest
-import com.atlast.data.dto.SignupResponse
+import com.atlast.domain.User
 
 interface AuthenticationRepository {
-     suspend fun signUp(signupRequest: SignupRequest): SignupResponse
+     suspend fun signUp(user: User): User
 
-     suspend fun login(loginRequest: LoginRequest): LoginResponse
+     suspend fun login(username: String, password: String): User
 }

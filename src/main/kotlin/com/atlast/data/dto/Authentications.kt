@@ -6,11 +6,13 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class SignupRequest(
+    @SerialName("email") val email: String,
     @SerialName("username") val username: String,
     @SerialName("password") val password: String,
 )
 
 fun SignupRequest.toUser(): User = User(
+    email = email,
     username = username,
     password = password
 )

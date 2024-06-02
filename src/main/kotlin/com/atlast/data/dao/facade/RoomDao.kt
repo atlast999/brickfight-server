@@ -9,8 +9,9 @@ interface RoomDao {
     fun getRoomCount(): Long
     fun getRoomMembers(roomId: Int): List<RoomMember>
     fun getRoom(roomId: Int): Room
-    fun deleteRoom(roomId: Int)
     fun addMember(roomId: Int, memberId: Int, isOwner: Boolean)
+    fun isRoomOwner(roomId: Int, memberId: Int): Boolean
+    fun deleteRoom(roomId: Int)
     fun removeMember(roomId: Int, memberId: Int)
 
 }

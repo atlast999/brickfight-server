@@ -48,12 +48,24 @@ class RoomService(
         )
     }
 
-    suspend fun joinRoom(roomId: Int) {
-        return roomRepository.joinRoom(roomId)
+    suspend fun getRoom(roomId: Int): RoomDto {
+        val room = roomRepository.getRoom(roomId = roomId)
+        val members = roomRepository.getRoomMembers(roomId = roomId)
+        return room.toRoomDto(members = members)
     }
 
-    suspend fun leaveRoom(roomId: Int) {
-        return roomRepository.leaveRoom(roomId)
+    suspend fun joinRoom(userId: Int, roomId: Int) {
+        return roomRepository.joinRoom(
+            userId = userId,
+            roomId = roomId
+        )
+    }
+
+    suspend fun leaveRoom(userId: Int, roomId: Int) {
+        return roomRepository.leaveRoom(
+            userId = userId,
+            roomId = roomId
+        )
     }
 
 }

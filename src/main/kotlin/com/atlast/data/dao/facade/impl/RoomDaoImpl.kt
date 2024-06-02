@@ -42,7 +42,8 @@ class RoomDaoImpl : RoomDao {
 
     override fun getRoom(roomId: Int) = Rooms.selectAll()
         .where { Rooms.id eq roomId }
-        .map(this::resultRowToRoom).single()
+        .single()
+        .let(this::resultRowToRoom)
 
     override fun deleteRoom(roomId: Int) {
         Rooms.deleteWhere { id eq roomId }
@@ -55,6 +56,13 @@ class RoomDaoImpl : RoomDao {
             it[isHost] = isOwner
         }
     }
+
+    override fun isRoomOwner(roomId: Int, memberId: Int): Boolean =
+        RoomMembers.select(RoomMembers.isHost)
+            .where {
+                (RoomMembers.roomID eq roomId) and (RoomMembers.userID eq memberId)
+            }.single()[RoomMembers.isHost]
+
 
     override fun removeMember(roomId: Int, memberId: Int) {
         RoomMembers.deleteWhere {

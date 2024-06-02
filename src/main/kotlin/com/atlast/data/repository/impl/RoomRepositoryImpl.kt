@@ -22,7 +22,7 @@ class RoomRepositoryImpl(
     override suspend fun getRooms(page: Int, pageSize: Int): List<Room> = DatabaseInstance.dbQuery {
         roomDao.getRooms(
             limit = pageSize,
-            offset = page * pageSize.toLong(),
+            offset = page.minus(1) * pageSize.toLong(),
         )
     }
 
@@ -34,11 +34,27 @@ class RoomRepositoryImpl(
         roomDao.getRoomCount()
     }
 
-    override suspend fun joinRoom(roomId: Int) {
-        TODO("Not yet implemented")
+    override suspend fun getRoom(roomId: Int): Room = DatabaseInstance.dbQuery {
+        roomDao.getRoom(roomId = roomId)
     }
 
-    override suspend fun leaveRoom(roomId: Int) {
-        TODO("Not yet implemented")
+    override suspend fun joinRoom(userId: Int, roomId: Int) = DatabaseInstance.dbQuery {
+        roomDao.addMember(
+            roomId = roomId,
+            memberId = userId,
+            isOwner = false,
+        )
+    }
+
+    override suspend fun leaveRoom(userId: Int, roomId: Int) = DatabaseInstance.dbQuery {
+        val isRoomOwner = roomDao.isRoomOwner(roomId = roomId, memberId = userId)
+        if (isRoomOwner) {
+            roomDao.deleteRoom(roomId = roomId)
+        } else {
+            roomDao.removeMember(
+                roomId = roomId,
+                memberId = userId,
+            )
+        }
     }
 }

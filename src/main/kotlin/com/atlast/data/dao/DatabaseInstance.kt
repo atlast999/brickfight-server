@@ -12,7 +12,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 object DatabaseInstance {
     fun init() {
         val driverClassName = "org.h2.Driver"
-        val jdbcURL = "jdbc:h2:./myh2file;DB_CLOSE_DELAY=-1;"
+        val jdbcURL = "jdbc:h2:./db/myh2file;DB_CLOSE_DELAY=-1;"
         Database.connect(
             url = jdbcURL,
             driver = driverClassName,

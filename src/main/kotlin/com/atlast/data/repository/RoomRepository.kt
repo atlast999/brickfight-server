@@ -12,7 +12,10 @@ interface RoomRepository {
 
     suspend fun getRoomCount(): Long
 
-    suspend fun joinRoom(roomId: Int)
+    suspend fun getRoom(roomId: Int): Room
 
-    suspend fun leaveRoom(roomId: Int)
+
+    suspend fun joinRoom(userId: Int, roomId: Int)
+
+    suspend fun leaveRoom(userId: Int, roomId: Int)
 }

@@ -9,5 +9,3 @@ data class RoomMember(
     val id: Int,
     val name: String,
 )
-
-typealias RoomMemberId = Int

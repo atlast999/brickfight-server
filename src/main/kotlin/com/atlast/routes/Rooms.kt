@@ -1,5 +1,7 @@
 package com.atlast.routes
 
+import com.atlast.data.dao.DatabaseInstance
+import com.atlast.data.dao.entities.RoomMembers
 import com.atlast.data.dao.facade.impl.RoomDaoImpl
 import com.atlast.data.dto.CreateRoomRequest
 import com.atlast.data.dto.wrapper.AppResponse
@@ -17,6 +19,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.routing
+import org.jetbrains.exposed.sql.selectAll
 
 fun Application.configureRoomRoutes() {
 
@@ -27,6 +30,29 @@ fun Application.configureRoomRoutes() {
     val roomService = RoomService(roomRepository)
 
     routing {
+
+        get("/ownership") {//testing purposes only
+            val roomId = call.parameters["roomId"]?.toInt()
+            val response = DatabaseInstance.dbQuery {
+                RoomMembers.selectAll().apply {
+                    roomId?.let {
+                        where {
+                            RoomMembers.roomID eq roomId
+                        }
+                    }
+                }.map {
+                    mapOf(
+                        "userId" to it[RoomMembers.userID].value.toString(),
+                        "roomId" to it[RoomMembers.roomID].value.toString(),
+                        "isHost" to it[RoomMembers.isHost].toString(),
+                    )
+                }
+            }
+            call.respond(
+                message = response
+            )
+        }
+
         authenticate("auth-jwt") {
 
             post("/room") {
@@ -59,9 +85,38 @@ fun Application.configureRoomRoutes() {
                 )
             }
 
-            put("/room/join") {
+            get("/room/{id}") {
+                val roomId = call.parameters["id"]?.toInt()!!
+                val response = roomService.getRoom(
+                    roomId = roomId,
+                )
+                call.respond(
+                    message = AppResponse(
+                        data = response,
+                    )
+                )
+            }
+
+            put("/room/{id}/join") {
+                val roomId = call.parameters["id"]?.toInt()!!
+                val userId = JWTExt.extractUserId(
+                    principal = call.principal()
+                )
                 roomService.joinRoom(
-                    roomId = 1,
+                    userId = userId,
+                    roomId = roomId,
+                )
+                call.respond(HttpStatusCode.Accepted)
+            }
+
+            put("/room/{id}/leave") {
+                val roomId = call.parameters["id"]?.toInt()!!
+                val userId = JWTExt.extractUserId(
+                    principal = call.principal()
+                )
+                roomService.leaveRoom(
+                    userId = userId,
+                    roomId = roomId,
                 )
                 call.respond(HttpStatusCode.Accepted)
             }

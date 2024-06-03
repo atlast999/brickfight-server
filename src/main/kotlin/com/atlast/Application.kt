@@ -7,7 +7,9 @@ import com.atlast.plugins.configureMonitoring
 import com.atlast.plugins.configureRouting
 import com.atlast.plugins.configureSecurity
 import com.atlast.plugins.configureSerialization
+import com.atlast.plugins.configureSocket
 import com.atlast.routes.configureAuthenticationRoutes
+import com.atlast.routes.configureChatRoutes
 import com.atlast.routes.configureRoomRoutes
 import io.ktor.server.application.Application
 import io.ktor.server.engine.embeddedServer
@@ -26,7 +28,9 @@ fun Application.module() {
     configureDatabases()
     configureSecurity()
     configureRouting()
+    configureSocket()
 
     configureAuthenticationRoutes()
     configureRoomRoutes()
+    configureChatRoutes()
 }

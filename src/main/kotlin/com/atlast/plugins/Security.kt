@@ -1,30 +1,38 @@
 package com.atlast.plugins
 
+import com.atlast.utils.JWTExt
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import io.ktor.server.application.*
-import io.ktor.server.auth.*
-import io.ktor.server.auth.jwt.*
-import io.ktor.server.response.*
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.Application
+import io.ktor.server.auth.authentication
+import io.ktor.server.auth.jwt.JWTPrincipal
+import io.ktor.server.auth.jwt.jwt
+import io.ktor.server.response.respond
 
 fun Application.configureSecurity() {
-    // Please read the jwt property from the config file if you are using EngineMain
-    val jwtAudience = "jwt-audience"
-    val jwtDomain = "https://jwt-provider-domain/"
-    val jwtRealm = "ktor sample app"
-    val jwtSecret = "secret"
     authentication {
-        jwt {
-            realm = jwtRealm
+        jwt("auth-jwt") {
+            realm = JWTExt.JWT_REALM
             verifier(
-                JWT
-                    .require(Algorithm.HMAC256(jwtSecret))
-                    .withAudience(jwtAudience)
-                    .withIssuer(jwtDomain)
+                JWT.require(Algorithm.HMAC256(JWTExt.JWT_SECRET))
+                    .withAudience(JWTExt.JWT_AUDIENCE)
+                    .withIssuer(JWTExt.JWT_DOMAIN)
                     .build()
             )
             validate { credential ->
-                if (credential.payload.audience.contains(jwtAudience)) JWTPrincipal(credential.payload) else null
+                val userId = credential.payload.getClaim(JWTExt.USER_ID_KEY).asInt()
+                if (userId != null) {
+                    JWTPrincipal(
+                        payload = credential.payload
+                    )
+                } else null
+            }
+            challenge { _, _ ->
+                call.respond(
+                    status = HttpStatusCode.Unauthorized,
+                    message = "Token is not valid or has expired",
+                )
             }
         }
     }

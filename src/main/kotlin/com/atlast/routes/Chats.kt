@@ -3,21 +3,30 @@ package com.atlast.routes
 import io.ktor.server.application.Application
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.webSocket
+import io.ktor.websocket.CloseReason
 import io.ktor.websocket.DefaultWebSocketSession
+import io.ktor.websocket.close
 import kotlinx.coroutines.channels.consumeEach
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 fun Application.configureChatRoutes() {
     val chatService = ChatService()
     routing {
-        webSocket("/ws/{roomId}") {
+        webSocket("/ws/{roomId}/{name}") {
             val roomId = call.parameters["roomId"]?.toIntOrNull() ?: return@webSocket
-            val client = ClientConnection(this)
-            runCatching {
+            val client = ClientConnection(
+                name = call.parameters["name"] ?: "unknown",
+                session = this
+            )
+            println("Client connected: ${client.name}")
+            try {
                 chatService.onClientConnected(
                     roomId = roomId,
                     client = client,
                 )
-            }.onFailure {
+            } finally {
+                println("Client disconnected: ${client.name} with reason: $closeReason")
                 chatService.onClientDisconnected(
                     roomId = roomId,
                     client = client,
@@ -27,15 +36,22 @@ fun Application.configureChatRoutes() {
     }
 }
 
-class ClientConnection(val session: DefaultWebSocketSession)
+class ClientConnection(
+    val name: String,
+    val session: DefaultWebSocketSession,
+)
 
 typealias RoomId = Int
 
 class ChatService {
-    private val rooms = mutableMapOf<RoomId, MutableSet<ClientConnection>>()
+    private val rooms = ConcurrentHashMap<RoomId, MutableSet<ClientConnection>>()
 
     suspend fun onClientConnected(roomId: RoomId, client: ClientConnection) {
-        rooms.getOrPut(roomId) { mutableSetOf() }.add(client)
+        rooms.getOrPut(roomId) {
+            Collections.synchronizedSet(HashSet())
+        }.add(client).also {
+            println("Client ${client.name} connected to room $roomId with result: $it")
+        }
         activeOnRoom(roomId = roomId, client = client)
     }
 
@@ -44,11 +60,17 @@ class ChatService {
     }
 
     private suspend fun activeOnRoom(roomId: RoomId, client: ClientConnection) {
-        val roomMembers = rooms[roomId] ?: return
-
         client.session.incoming.consumeEach { frame ->
+            val roomMembers = rooms[roomId] ?: return
+            println("Received message from client ${client.name} of room: $roomId")
+            println("Room members: ${roomMembers.joinToString { it.name }}")
             roomMembers.forEach { member ->
-                member.session.send(frame)
+                println("Sending message to client ${member.name} of room: $roomId")
+                runCatching {
+                    member.session.send(frame.copy()) //Cannot reuse frame across multiple send operations
+                }.onFailure {
+                    member.session.close(CloseReason(CloseReason.Codes.PROTOCOL_ERROR, ""))
+                }
             }
         }
     }

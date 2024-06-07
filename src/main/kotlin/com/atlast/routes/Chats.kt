@@ -1,6 +1,8 @@
 package com.atlast.routes
 
+import com.atlast.utils.JWTExt
 import io.ktor.server.application.Application
+import io.ktor.server.auth.principal
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.CloseReason
@@ -14,19 +16,64 @@ fun Application.configureChatRoutes() {
     val chatService = ChatService()
     routing {
         webSocket("/ws/{roomId}/{name}") {
-            val roomId = call.parameters["roomId"]?.toIntOrNull() ?: return@webSocket
+            val userId = JWTExt.extractUserId(principal = call.principal())
+            val roomId = call.parameters["roomId"]?.toIntOrNull() ?: return@webSocket run {
+                close(
+                    reason = CloseReason(
+                        code = CloseReason.Codes.VIOLATED_POLICY,
+                        message = "Room is undefined"
+                    )
+                )
+            }
             val client = ClientConnection(
-                name = call.parameters["name"] ?: "unknown",
+                userId = userId,
                 session = this
             )
-            println("Client connected: ${client.name}")
             try {
+                println("Client connected: $userId")
                 chatService.onClientConnected(
                     roomId = roomId,
                     client = client,
                 )
             } finally {
-                println("Client disconnected: ${client.name} with reason: $closeReason")
+                println("Client disconnected: $userId with reason: ${closeReason.await()}")
+                chatService.onClientDisconnected(
+                    roomId = roomId,
+                    client = client,
+                )
+            }
+        }
+
+        webSocket("/chat/{roomId}/{userId}") {
+            val userId = call.parameters["userId"]?.toIntOrNull() ?: return@webSocket run {
+                close(
+                    reason = CloseReason(
+                        code = CloseReason.Codes.VIOLATED_POLICY,
+                        message = "User is undefined"
+                    )
+                )
+            }
+            val roomId = call.parameters["roomId"]?.toIntOrNull() ?: return@webSocket run {
+                close(
+                    reason = CloseReason(
+                        code = CloseReason.Codes.VIOLATED_POLICY,
+                        message = "Room is undefined"
+                    )
+                )
+            }
+            val client = ClientConnection(
+                userId = userId,
+                session = this,
+                sendEcho = true,
+            )
+            try {
+                println("Client connected: $userId")
+                chatService.onClientConnected(
+                    roomId = roomId,
+                    client = client,
+                )
+            } finally {
+                println("Client disconnected: $userId with reason: ${closeReason.await()}")
                 chatService.onClientDisconnected(
                     roomId = roomId,
                     client = client,
@@ -37,8 +84,9 @@ fun Application.configureChatRoutes() {
 }
 
 class ClientConnection(
-    val name: String,
+    val userId: Int,
     val session: DefaultWebSocketSession,
+    val sendEcho: Boolean = false,
 )
 
 typealias RoomId = Int
@@ -49,9 +97,7 @@ class ChatService {
     suspend fun onClientConnected(roomId: RoomId, client: ClientConnection) {
         rooms.getOrPut(roomId) {
             Collections.synchronizedSet(HashSet())
-        }.add(client).also {
-            println("Client ${client.name} connected to room $roomId with result: $it")
-        }
+        }.add(client)
         activeOnRoom(roomId = roomId, client = client)
     }
 
@@ -61,11 +107,16 @@ class ChatService {
 
     private suspend fun activeOnRoom(roomId: RoomId, client: ClientConnection) {
         client.session.incoming.consumeEach { frame ->
-            val roomMembers = rooms[roomId] ?: return
-            println("Received message from client ${client.name} of room: $roomId")
-            println("Room members: ${roomMembers.joinToString { it.name }}")
+            val roomMembers = rooms[roomId] ?: return run {
+                client.session.close(
+                    CloseReason(
+                        CloseReason.Codes.VIOLATED_POLICY,
+                        "Room no longer exists"
+                    )
+                )
+            }
             roomMembers.forEach { member ->
-                println("Sending message to client ${member.name} of room: $roomId")
+                if (member.userId == client.userId && client.sendEcho.not()) return@forEach
                 runCatching {
                     member.session.send(frame.copy()) //Cannot reuse frame across multiple send operations
                 }.onFailure {

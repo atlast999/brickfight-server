@@ -15,6 +15,7 @@ class AuthenticationService(
     suspend fun signUp(signupRequest: SignupRequest): SignupResponse {
         val createdUser = authenticationRepository.signUp(user = signupRequest.toUser())
         return SignupResponse(
+            userId = createdUser.id,
             token = JWTExt.generateToken(userId = createdUser.id)
         )
     }
@@ -25,6 +26,7 @@ class AuthenticationService(
             password = loginRequest.password,
         )
         return LoginResponse(
+            userId = user.id,
             token = JWTExt.generateToken(userId = user.id),
         )
     }

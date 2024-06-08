@@ -9,3 +9,8 @@ data class RoomMember(
     val id: Int,
     val name: String,
 )
+
+data class RoomMembership(
+    val userId: Int,
+    val isHost: Boolean,
+)

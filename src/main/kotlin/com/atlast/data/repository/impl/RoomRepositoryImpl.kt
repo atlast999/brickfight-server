@@ -47,10 +47,26 @@ class RoomRepositoryImpl(
     }
 
     override suspend fun leaveRoom(userId: Int, roomId: Int) = DatabaseInstance.dbQuery {
-        val isRoomOwner = roomDao.isRoomOwner(roomId = roomId, memberId = userId)
-        if (isRoomOwner) {
-            roomDao.deleteRoom(roomId = roomId)
-        } else {
+        val memberships = roomDao.getRoomMembership(roomId = roomId)
+        val userMembership = memberships.firstOrNull { it.userId == userId } ?: run {
+            throw IllegalStateException("User not in room")
+        }
+        if (userMembership.isHost) { // room owner left
+            val leftovers = memberships.filter { it.userId != userId }
+            if (leftovers.isEmpty()) { //there is no one else in room
+                roomDao.deleteRoom(roomId = roomId)
+            } else { //promote one of the remaining members to room owner
+                val newOwner = leftovers.first()
+                roomDao.removeMember(
+                    roomId = roomId,
+                    memberId = userId,
+                )
+                roomDao.updateRoomOwnership(
+                    roomId = roomId,
+                    memberId = newOwner.userId,
+                )
+            }
+        } else { //member left
             roomDao.removeMember(
                 roomId = roomId,
                 memberId = userId,

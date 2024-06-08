@@ -6,12 +6,14 @@ import com.atlast.data.dao.entities.Users
 import com.atlast.data.dao.facade.RoomDao
 import com.atlast.domain.Room
 import com.atlast.domain.RoomMember
+import com.atlast.domain.RoomMembership
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.update
 
 class RoomDaoImpl : RoomDao {
 
@@ -23,6 +25,11 @@ class RoomDaoImpl : RoomDao {
     private fun resultRowToRoomMember(row: ResultRow) = RoomMember(
         id = row[RoomMembers.userID].value,
         name = row[Users.username],
+    )
+
+    private fun resultRowToRoomMembership(row: ResultRow) = RoomMembership(
+        userId = row[RoomMembers.userID].value,
+        isHost = row[RoomMembers.isHost],
     )
 
     override fun createRoom(room: Room) = Rooms.insert {
@@ -57,16 +64,25 @@ class RoomDaoImpl : RoomDao {
         }
     }
 
-    override fun isRoomOwner(roomId: Int, memberId: Int): Boolean =
-        RoomMembers.select(RoomMembers.isHost)
-            .where {
-                (RoomMembers.roomID eq roomId) and (RoomMembers.userID eq memberId)
-            }.single()[RoomMembers.isHost]
-
-
     override fun removeMember(roomId: Int, memberId: Int) {
         RoomMembers.deleteWhere {
             (roomID eq roomId) and (userID eq memberId)
         }
+    }
+
+    override fun getRoomMembership(roomId: Int): List<RoomMembership> =
+        RoomMembers.selectAll()
+            .where { RoomMembers.roomID eq roomId }
+            .map(this::resultRowToRoomMembership)
+
+    override fun updateRoomOwnership(roomId: Int, memberId: Int) {
+        RoomMembers.update(
+            where = {
+                (RoomMembers.roomID eq roomId) and (RoomMembers.userID eq memberId)
+            },
+            body = {
+                it[isHost] = true
+            }
+        )
     }
 }

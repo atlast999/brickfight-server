@@ -62,7 +62,7 @@ class RoomService(
     }
 
     suspend fun leaveRoom(userId: Int, roomId: Int) {
-        return roomRepository.leaveRoom(
+        roomRepository.leaveRoom(
             userId = userId,
             roomId = roomId
         )

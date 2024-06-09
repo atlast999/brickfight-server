@@ -25,10 +25,12 @@ data class LoginRequest(
 
 @Serializable
 data class LoginResponse(
+    @SerialName("user_id") val userId: Int,
     @SerialName("token") val token: String,
 )
 
 @Serializable
 data class SignupResponse(
+    @SerialName("user_id") val userId: Int,
     @SerialName("token") val token: String,
 )

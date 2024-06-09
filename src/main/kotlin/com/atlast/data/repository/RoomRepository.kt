@@ -14,7 +14,6 @@ interface RoomRepository {
 
     suspend fun getRoom(roomId: Int): Room
 
-
     suspend fun joinRoom(userId: Int, roomId: Int)
 
     suspend fun leaveRoom(userId: Int, roomId: Int)

@@ -30,6 +30,9 @@ class RoomManager {
         client: ClientConnection,
     ) {
         rooms[roomId]?.remove(client)
+        if (rooms[roomId].isNullOrEmpty()) {
+            rooms.remove(roomId)
+        }
     }
 
     fun getMembers(roomId: RoomId): Set<ClientConnection>? {
@@ -74,15 +77,15 @@ class ChatService(
     }
 
     private suspend fun activeOnRoom(roomId: RoomId, client: ClientConnection) {
-        client.session.incoming.consumeEach { frame ->
-            val roomMembers = roomManagers.getMembers(roomId) ?: return run {
-                client.session.close(
-                    CloseReason(
-                        CloseReason.Codes.VIOLATED_POLICY,
-                        "Room no longer exists"
-                    )
+        val roomMembers = roomManagers.getMembers(roomId) ?: return run {
+            client.session.close(
+                CloseReason(
+                    CloseReason.Codes.VIOLATED_POLICY,
+                    "Room no longer exists"
                 )
-            }
+            )
+        }
+        client.session.incoming.consumeEach { frame ->
             roomMembers.forEach { member ->
                 if (member.userId == client.userId && client.sendEcho.not()) return@forEach
                 runCatching {
